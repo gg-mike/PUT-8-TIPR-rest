@@ -1,4 +1,6 @@
+import etag from "etag";
 import jwt from "jsonwebtoken";
+import User from "../models/user.model.js";
 
 export const wrapper = async (req, res, callback) => {
   try {
@@ -8,22 +10,22 @@ export const wrapper = async (req, res, callback) => {
   }
 }
 
-export const addValidator = async (token, res, collection) => {
+export const addValidator = async (token, collection) => {
   const id = jwt.verify(token, process.env.SECRET_KEY)?._id;
   if (!id)
-    return { res: res.status(400).send("Provided token is invalid"), valid: false };
+    return { status: 400, message: "Provided token is invalid"};
   const doc = await collection.findById(id);
   if (doc)
-    return { res: res.status(400).send("Provided token was already used"), valid: false };
-  return { id, valid: true };
+    return { status: 400, message: "Provided token was already used" };
+  return { id };
 }
 
-export const userAuthValidator = (uid, authUser, res) => {
+export const userAuthValidator = (uid, authUser) => {
   if (!authUser)
-    return { res: res.status(401).send("Unauthenticated"), valid: false };
+    return { status: 401, message: "Unauthenticated" };
   else if (authUser.id !== uid && !authUser.isAdmin)
-    return { res: res.status(403).send("Forbidden"), valid: false };
-  return { valid: true };
+    return { status: 403, message: "Forbidden"};
+  return {};
 }
 
 export const pageCollection = async (req, collection, filter={}, projection={}) => {
@@ -34,4 +36,31 @@ export const pageCollection = async (req, collection, filter={}, projection={}) 
     "next-page": nextPage, 
     "docs": await collection.find(filter, projection).skip(page * 5).limit(5).sort({ name: "asc" })
   };
+}
+
+export const validEtag = (req, data) => {
+  if (req.headers["if-match"] === undefined)
+    return { status: 400, message: "Missing attribute 'if-match'" };
+  if (req.headers["if-match"] !== etag(Buffer.from(JSON.stringify(data)), { weak: true }))
+    return { status: 412, message: "Attempted to work on old version of the document" };
+  return {};
+}
+
+export const getCharacter = async (req, uid, cid, ifMatch = false) => {
+  if ((await User.countDocuments({ _id: uid})) === 0)
+    return { status: 404, message: "User with this id does not exist" };
+
+  let result = await User.findById(uid, { characters: 1 });
+  result = result.characters.filter(doc => doc._id == cid);
+
+  if (result.length == 0)
+    return { status: 404, message: "Character with this id does not exist" };
+  
+  if (ifMatch) {
+    const { status, message } = validEtag(req, result[0]);
+    if (status != 200)
+      return { status, message };
+  }
+
+  return { character: result[0] };
 }
