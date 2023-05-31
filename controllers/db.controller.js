@@ -1,44 +1,9 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "../models/user.model.js";
 import Campaign from "../models/campaign.model.js";
 
-export const getAuthToken = async (req, res) => {
-  try {
-    const { login, password } = req.query;
-
-    const user = await User.findOne({ login });
-    if (!user) return res.status(404).send("User doesn't exist");
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) return res.status(400).send("Invalid credentials");
-
-    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.SECRET_KEY, { expiresIn: "2h" });
-    res.status(200).json({ token });  
-  } catch (err) {
-    res.status(500).send(`[ERROR] GET /auth-token => ${err.message}`);
-  }
-}
-
-export const getPostToken = async (req, res) => {
-  try {
-    const token = jwt.sign({ _id: new mongoose.Types.ObjectId() }, process.env.SECRET_KEY, { expiresIn: 120 });
-    res.status(200).json({ token });
-  } catch (err) {
-    res.status(500).send(`[ERROR] GET /post-token => ${err.message}`);
-  }
-}
-
-export const transfer = async (req, res) => {
-  try {
-    res.status(501).send("Endpoint not implemented");
-  } catch (err) {
-    res.status(500).send(`[ERROR] POST /transfer => ${err.message}`);
-  }
-}
-
-export const resetDB = async (req, res) => {
+export const reset = async (_, res) => {
   try {
     console.log("[INFO ] resetting database");
     await mongoose.connection.db.dropDatabase();
@@ -183,8 +148,6 @@ export const resetDB = async (req, res) => {
       campaign.characters = campaign.characters.map(character => users[character[0]].characters[character[1]]._id)
     });
 
-    console.log(campaigns[0]);
-    
     await User.insertMany(users);
     await Campaign.insertMany(campaigns);
     res.status(200).send("Database successfully resetted");
