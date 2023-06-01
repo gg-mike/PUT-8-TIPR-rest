@@ -35,15 +35,17 @@ export const campaign = {
     if (await documentMissing(User, { "_id": req.body.dm }))
       return res.status(404).send("User with this id does not exist (DM)");
 
-    for await (const id of req.body.characters) {
-      if (await documentMissing(User, { "characters._id": id }))
-        return res.status(404).send("Character with this id (" + id + ") does not exist");
-    }
+    if (req.body.characters !== undefined)
+      for await (const id of req.body.characters) {
+        if (await documentMissing(User, { "characters._id": id }))
+          return res.status(404).send("Character with this id (" + id + ") does not exist");
+      }
 
-    for await (const id of req.body.fallen) {
-      if (await documentMissing(User, { "characters._id": id }))
-        return res.status(404).send("Fallen character with this id (" + id + ") does not exist");
-    }
+    if (req.body.fallen !== undefined)
+      for await (const id of req.body.fallen) {
+        if (await documentMissing(User, { "characters._id": id }))
+          return res.status(404).send("Fallen character with this id (" + id + ") does not exist");
+      }
 
     next();
   },

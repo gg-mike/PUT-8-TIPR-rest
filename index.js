@@ -16,7 +16,7 @@ app.use(bodyParser.json({ limit: "30mb", extended: true }));
 app.use(bodyParser.urlencoded({ limit: "30mb", extended: true }));
 
 app.get("/", (_, res) => res.send("App is running"));
-app.get("/tokens", generateToken);
+app.post("/tokens", generateToken);
 app.post("/db", reset);
 
 app.use(auth);

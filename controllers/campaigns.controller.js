@@ -1,6 +1,7 @@
 import Campaign from "../models/campaign.model.js";
 import User from "../models/user.model.js";
-import { getCharacter, pageCollection } from "../utils/collection.js";
+import { documentMissing, getCharacter, pageCollection } from "../utils/collection.js";
+import { bodyValidator } from "../utils/validators.js";
 
 /* COLLECTION */
 
@@ -10,8 +11,8 @@ export const all = async (req, res) => {
 }
 
 export const add = async (req, res) => {
-  await Campaign.insertOne({ _id: req.newId, ...req.body });
-  res.status(201).send("Created campaign");
+  await Campaign.insertMany([{ _id: req.newId, ...req.body }]);
+  res.status(201).send("Created campaign (" + req.newId + ")");
 }
 
 /* ELEMENT */
@@ -22,14 +23,50 @@ export const info = async (req, res) => {
 
 export const replace = async (req, res) => {
   const { rid } = req.params;
+  const { status, message } = bodyValidator(req.body, { dm: "String", name: "String", "characters": "Array", fallen: "Array" });
+  if (status) return res.status(status).send(message);
+
+  if (await documentMissing(User, { "_id": req.body.dm }))
+    return res.status(404).send("User with this id does not exist (DM)");
+
+  for await (const id of req.body.characters) {
+    if (await documentMissing(User, { "characters._id": id }))
+      return res.status(404).send("Character with this id (" + id + ") does not exist");
+    let c1 = await Campaign.findOne({ "characters": id });
+    if (c1._id !== rid)
+      return res.status(400).send("Character with this id (" + id + ") already used for different campaign (" + c1._id + ")");
+    let c2 = await Campaign.findOne({ "fallen": id });
+    if (c2._id !== rid)
+      return res.status(400).send("Character with this id (" + id + ") already used for different campaign (" + c2._id + ")");
+  }
+
+  for await (const id of req.body.fallen) {
+    if (await documentMissing(User, { "characters._id": id }))
+      return res.status(404).send("Fallen character with this id (" + id + ") does not exist");
+    let c1 = await Campaign.findOne({ "characters": id });
+    if (c1._id !== rid)
+      return res.status(400).send("Character with this id (" + id + ") already used for different campaign (" + c1._id + ")");
+    let c2 = await Campaign.findOne({ "fallen": id });
+    if (c2._id !== rid)
+      return res.status(400).send("Character with this id (" + id + ") already used for different campaign (" + c2._id + ")");
+  }
+
+  await Campaign.updateOne({ _id: rid }, { ...req.body });
   
-  res.status(501).send("Endpoint not implemented");
+  res.status(200).send("Replaced campaign");
 }
 
 export const update = async (req, res) => {
   const { rid } = req.params;
+  const { status, message } = bodyValidator(req.body, { dm: "String" });
+  if (status) return res.status(status).send(message);
+
+  if (await documentMissing(User, { "_id": req.body.dm }))
+    return res.status(404).send("User with this id does not exist (DM)");
+
+    await Campaign.updateOne({ _id: rid }, { dm: req.body.dm });
   
-  res.status(501).send("Endpoint not implemented");
+  res.status(200).send("Updated campaign");
 }
 
 export const remove = async (req, res) => {

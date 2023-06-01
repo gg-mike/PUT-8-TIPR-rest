@@ -14,8 +14,8 @@ export const all = async (req, res) => {
 }
 
 export const add = async (req, res) => {
-  await User.insertOne({ _id: req.newId, ...req.body, password: await bcrypt.hash(req.body.password, 12) });
-  res.status(201).send("Created user");
+  await User.insertMany([{ _id: req.newId, ...req.body, password: await bcrypt.hash(req.body.password, 12) }]);
+  res.status(201).send("Created user (" + req.newId + ")");
 }
 
 /* ELEMENT */
@@ -94,7 +94,7 @@ export const allCharacters = async (req, res) => {
 
 export const addCharacter = async (req, res) => {
   await User.findByIdAndUpdate(req.params.rid, { $push: { characters: { _id: req.newId, ...req.body }}});
-  res.status(200).send("Added character");
+  res.status(200).send("Added character (" + req.newId + ")");
 }
 
 /* CHARACTER ELEMENT */

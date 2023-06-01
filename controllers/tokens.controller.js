@@ -2,16 +2,17 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import User from "../models/user.model.js";
+import { bodyValidator } from "../utils/validators.js";
 
 export const generateToken = async (req, res) => {
-  const { type, login, password } = req.query;
+  const { type } = req.query;
 
   if (!type)
     return res.status(400).send("Missing query param 'type'");
 
   switch (type) {
     case "auth":
-      return generateAuthToken(login, password, res);
+      return generateAuthToken(req.body, res);
     case "post":
       return generatePostToken(res);
     default:
@@ -19,18 +20,15 @@ export const generateToken = async (req, res) => {
   }
 }
 
-const generateAuthToken = async (login, password, res) => {
+const generateAuthToken = async (body, res) => {
   try {
-    if (!login)
-      return res.status(400).send("Missing query param 'login'");
+    const { status, message } = bodyValidator(body, { login: "String", password: "String" });
+    if (status) return res.status(400).send(message);
 
-    if (!password)
-      return res.status(400).send("Missing query param 'password'");
-
-    const user = await User.findOne({ login });
+    const user = await User.findOne({ login: body.login });
     if (!user) return res.status(404).send("User doesn't exist");
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    const passwordMatch = await bcrypt.compare(body.password, user.password);
     if (!passwordMatch) return res.status(400).send("Invalid credentials");
 
     const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.SECRET_KEY, { expiresIn: "2h" });

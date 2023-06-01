@@ -4,14 +4,18 @@ import jwt from "jsonwebtoken";
 export const addValidator = async (token, collection, key) => {
   if (!token)
     return { status: 400, message: "Missing query param 'token'" };
-  const id = jwt.verify(token, process.env.SECRET_KEY)?._id;
-  if (!id)
-    return { status: 400, message: "Provided token is invalid"};
+  try {
+    const id = jwt.verify(token, process.env.SECRET_KEY)?._id;
+    if (!id)
+      return { status: 400, message: "Provided token is invalid"};
   
-  const doc = await collection.findOne({ [key]: id });
-  if (doc)
-    return { status: 400, message: "Provided token was already used" };
-  return { id };
+    const doc = await collection.findOne({ [key]: id });
+    if (doc)
+      return { status: 400, message: "Provided token was already used" };
+    return { id };
+  } catch (e) {
+    return { status: 400, message: "Provided token is expired"};
+  }
 }
 
 export const authValidator = (rid, authUser) => {
