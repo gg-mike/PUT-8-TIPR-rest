@@ -19,6 +19,6 @@ router.put(   "/:rid/characters/:sid",  [u.auth, u.exists, c.exists, c.replace, 
 router.patch( "/:rid/characters/:sid",  [u.auth, u.exists, c.exists, c.update, c.etag],  (req, res) => wrapper(req, res, ctrl.updateCharacter));
 router.delete("/:rid/characters/:sid",  [u.auth, u.exists, c.exists],                    (req, res) => wrapper(req, res, ctrl.removeCharacter));
 
-router.post("/:rid/characters/transfer", [u.auth, u.exists], (req, res) => wrapper(req, res, ctrl.transferCharacters));
+router.post("/:rid/transfers", [u.auth, u.exists], (req, res) => wrapper(req, res, ctrl.transferCharacters));
 
 export default router;
